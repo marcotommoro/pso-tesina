@@ -2,6 +2,8 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <stdbool.h>
 
 float time_difference_msec(struct timeval t0, struct timeval t1)
 {
@@ -16,4 +18,10 @@ void msleep(int n)
     }
 
     usleep(n * 1000);
+}
+
+int file_exists(char *filename)
+{
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
 }

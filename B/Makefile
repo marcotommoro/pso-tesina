@@ -5,5 +5,5 @@ all: build run
 
 build:
 	gcc $(NAME).c $(UTILS_FILE)  -o $(NAME) -lpthread -w
-run:
-	./$(NAME)
+clean:
+	rm -f es

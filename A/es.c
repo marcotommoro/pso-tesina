@@ -4,11 +4,10 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "../utils/utils.h"
 
-#define N_THREAD 20
-#define FILENAME "file.txt"
 #define WAIT 0
 #define PROCESS 1
 
@@ -22,7 +21,7 @@ typedef struct
 
 Master m;
 
-void __init__()
+void __init__(char *filename)
 {
     pthread_mutexattr_t m_attr;
     pthread_mutexattr_init(&m_attr);
@@ -32,13 +31,15 @@ void __init__()
     pthread_mutex_init(&m.min_mutex, &m_attr);
     pthread_mutex_init(&m.max_mutex, &m_attr);
 
-    m.sum = m.min = m.n_odd = m.max = m.is_end = 0;
+    m.sum = m.n_odd = m.is_end = 0;
+    m.min = INT_MAX;
+    m.max = INT_MIN;
 
-    m.fp = fopen(FILENAME, "r");
+    m.fp = fopen(filename, "r");
 
     if (!m.fp)
     {
-        printf("ERROR: could not open %s\n", FILENAME);
+        printf("ERROR: could not open %s\n", filename);
         exit(EXIT_FAILURE);
     }
 }
@@ -142,30 +143,55 @@ void *thread(void *arg)
     pthread_exit(NULL);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    printf("Run app with %d Threads\n\n", N_THREAD);
-
     struct timeval t0;
     struct timeval t1;
     float elapsed;
-    pthread_t p[N_THREAD];
 
-    time_t start = time(0);
+    if (argc != 3)
+    {
+        printf("2 parameters reqired!\n");
+        printf("`./a N_THREAD FILE`\n");
+        printf("ex: `./a 10 file.txt`\n");
+        exit(NULL);
+    }
 
+    char *filename;
+
+    const int N_THREAD = atoi(argv[1]) - 1;
+    if (N_THREAD < 0)
+    {
+        printf("N_THREAD must be at least 1.\n");
+        exit(NULL);
+    }
+    filename = malloc(sizeof(char) * strlen(argv[2]));
+    strcpy(filename, argv[2]);
+
+    if (!file_exists(argv[2]))
+        exit(NULL);
+
+    printf("Run app with 1 Master and %d threads workers\n\n", N_THREAD);
+
+    // Take time now - start
     gettimeofday(&t0, 0);
 
-    __init__();
-
+    pthread_t p[N_THREAD];
     pthread_attr_t a;
     pthread_attr_init(&a);
+
+    __init__(filename);
 
     for (int i = 0; i < N_THREAD; i++)
         pthread_create(&p[i], &a, thread, NULL);
 
+    // Execute master thread
+    thread(NULL);
+
     for (int i = 0; i < N_THREAD; i++)
         pthread_join(p[i], NULL);
 
+    // Take time now - end
     gettimeofday(&t1, 0);
     elapsed = time_difference_msec(t0, t1);
 

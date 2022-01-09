@@ -11,15 +11,53 @@
 #define WAIT 0
 #define PROCESS 1
 
+typedef struct Node
+{
+    int num;
+    char action;
+    struct Node *next;
+};
+
 typedef struct
 {
     pthread_mutex_t read_mutex, sum_mutex, odd_mutex, min_mutex, max_mutex;
     FILE *fp;
     int sum, min, n_odd, max;
     int is_end;
+    struct Node *linked_list;
 } Master;
 
 Master m;
+
+void init_linked_list()
+{
+    struct Node *HEAD;
+    struct Node *LAST;
+    LAST = HEAD = NULL;
+
+    int res;
+    char action;
+    int num;
+
+    while (fscanf(m.fp, "%c   %d\n", &action, &num) == 2)
+    {
+        if (HEAD == NULL)
+        {
+            HEAD = LAST = (struct Node *)malloc(sizeof(struct Node));
+        }
+        else
+        {
+            LAST->next = (struct Node *)malloc(sizeof(struct Node));
+            LAST = LAST->next;
+        }
+
+        LAST->action = action;
+        LAST->num = num;
+        LAST->next = NULL;
+    }
+
+    m.linked_list = HEAD;
+}
 
 void __init__(char *filename)
 {
@@ -42,6 +80,50 @@ void __init__(char *filename)
         printf("ERROR: could not open %s\n", filename);
         exit(EXIT_FAILURE);
     }
+    init_linked_list();
+}
+
+int get_next_element(int arr[])
+{
+    // Optimization, not blocking
+    if (m.is_end)
+    {
+        return -1;
+    }
+
+    pthread_mutex_lock(&m.read_mutex);
+
+    // Exit if list is ended
+    if (m.linked_list == NULL)
+    {
+        m.is_end = 1;
+        pthread_mutex_unlock(&m.read_mutex);
+
+        return -1;
+    }
+
+    arr[1] = m.linked_list->num;
+
+    if (m.linked_list->action == 'p')
+    {
+        arr[0] = PROCESS;
+    }
+    else if (m.linked_list->action == 'w')
+    {
+        arr[0] = WAIT;
+    }
+    else
+    {
+        printf("ERROR: Unrecognized action: '%c'\n", m.linked_list->action);
+        exit(EXIT_FAILURE);
+    }
+
+    // set next element in the list
+    m.linked_list = m.linked_list->next;
+
+    pthread_mutex_unlock(&m.read_mutex);
+
+    return 0;
 }
 
 int read_char(int arr[])
@@ -122,7 +204,7 @@ void *thread(void *arg)
 {
     int arr[2];
 
-    while (read_char(arr) != -1)
+    while (get_next_element(arr) != -1)
     {
         int n = arr[1];
         if (arr[0] == PROCESS)

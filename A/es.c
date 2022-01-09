@@ -31,9 +31,9 @@ Master m;
 
 void init_linked_list()
 {
-    struct Node *HEAD;
-    struct Node *LAST;
-    LAST = HEAD = NULL;
+    struct Node *head;
+    struct Node *last;
+    last = head = NULL;
 
     int res;
     char action;
@@ -41,22 +41,22 @@ void init_linked_list()
 
     while (fscanf(m.fp, "%c   %d\n", &action, &num) == 2)
     {
-        if (HEAD == NULL)
+        if (head == NULL)
         {
-            HEAD = LAST = (struct Node *)malloc(sizeof(struct Node));
+            head = last = (struct Node *)malloc(sizeof(struct Node));
         }
         else
         {
-            LAST->next = (struct Node *)malloc(sizeof(struct Node));
-            LAST = LAST->next;
+            last->next = (struct Node *)malloc(sizeof(struct Node));
+            last = last->next;
         }
 
-        LAST->action = action;
-        LAST->num = num;
-        LAST->next = NULL;
+        last->action = action;
+        last->num = num;
+        last->next = NULL;
     }
 
-    m.linked_list = HEAD;
+    m.linked_list = head;
 }
 
 void __init__(char *filename)

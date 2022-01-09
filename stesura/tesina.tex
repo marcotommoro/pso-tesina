@@ -133,13 +133,13 @@ In questa tesi si utilizza, per semplicità, la denominazione di "Esercizio A" e
 \subsection{Esercizio A}
 L'esercizio A richiede di parallelizzare un programma di somma.
 Il programma legge una lista di "task" da un file.
-Ogni task consiste in un carattere, che definisce il codice di un'azione da intraprendere, e un numero. Il carattere codice può assumere i valori:
+Ogni task consiste in un carattere che definisce il codice di un'azione da intraprendere, e un numero. Il carattere codice può assumere i valori:
 \begin{itemize}
     \item "p" — tempo di processamento;
     \item "w" — tempo di attesa.
 \end{itemize}
 Il file di input simula diversi carichi di lavoro in un sistema a multiprocessore.
-Per questo esercizio il numero che segue il codice, ha uno scopo diverso in base al valore del codice:
+Per questo esercizio il numero \texttt{n} che segue il codice, ha uno scopo diverso in base al valore del codice:
 \begin{itemize}
     \item "p" — il numero \texttt{n} indica il valore da processare in maniera atomica in 4 funzioni di aggregazioni diverse:
     \begin{itemize}
@@ -162,7 +162,7 @@ p   3
 %
 \clearpage
 %
-Per l'esempio sovracitato l'output che ne deriva è:
+Per l'esempio sopracitato l'output che ne deriva è:
 \begin{itemize}
     \item somma: 6;
     \item minimo: 1;
@@ -179,7 +179,7 @@ L'esercizio B è stato scritto da Grant Hutchins, ispirato da un'amica intenta a
 \end{itemize}
 Gli immigrati aspettano in fila, effettuano il check-in, e dopodichè si siedono ad aspettare.
 Ad un certo punto entra il/la giudice nell'edificio. Mentre il/la giudice è all'interno, nessun altro può entrare, gli spettatori però possono lasciare l'edificio.
-Quanto tutti gli immigrati hanno effettuato il check-in, il/la giudice conferma la loro cittadinanza, ed a questo punto ogni immigrato che è stato confermato dal/la giudice può ritirare il proprio certificato di cittadinanza americana.
+Quanto tutti gli immigrati hanno effettuato il check-in, il/la giudice conferma la loro cittadinanza,e a questo punto ogni immigrato che è stato confermato dal/la giudice può ritirare il proprio certificato di cittadinanza americana.
 Il/la giudice lascia l'edificio dopo un periodo P casuale di tempo.
 Tutti coloro che sono stati confermati possono ritirare il proprio certificato e lasciare l'aula, mentre gli immigrati che non hanno fatto in tempo a farsi confermare dal giudice, dovranno ripresentarsi nuovamente in un altro momento, quindi lasciare l'edificio, rientrare, effettuare il check-in, sedersi ed aspettare nuovamente l'arrivo del/la giudice.
 
@@ -187,8 +187,7 @@ Tutti coloro che sono stati confermati possono ritirare il proprio certificato e
 
 \section{Soluzioni}
 \subsection{Esercizio A}
-Per affrontare questo esercizio prima di tutto si è dovuto generare il \texttt{file.txt} con all'interno l'insieme dei task.
-
+Per affrontare questo esercizio prima di tutto si è dovuto generare il file con all'interno l'elenco dei task.
 
 Si è pensato per la risoluzione dell'esercizio di creare una struttura dati globale che contenesse al suo interno tutte le variabili condivise tra i vari thread:
 \begin{itemize}
@@ -199,7 +198,7 @@ Si è pensato per la risoluzione dell'esercizio di creare una struttura dati glo
     \item \texttt{*fp} — il puntatore al file \texttt{file.txt};
     \item \texttt{is\_end} — una variabile che indica la fine dell'esecuzione.
 \end{itemize}
-Per ognuna di queste variabili (ad eccezione di \texttt{is\_end} che non ha problemi di mutua esclusione) è stato creato un semaforo ad-hoc (sempre all'interno della struttura condivisa) che garantisca l'esecuzione atomica dell'operazione.
+Per ognuna di queste variabili (ad eccezione di \texttt{is\_end} che non ha problemi di mutua esclusione) è stato creato un semaforo ad-hoc (sempre all'interno della struttura condivisa) che garantisce l'esecuzione atomica dell'operazione.
 
 \subsubsection{Inizializzazione}
 Si è cominciato quindi con l'inizializzazione delle variabili condivise.
@@ -207,25 +206,26 @@ Si è cominciato quindi con l'inizializzazione delle variabili condivise.
 \begin{coloredquotation}
 \begin{center}
 \begin{verbatim}
-void __init__()
+void __init__(char *filename)
 {
     pthread_mutexattr_t m_attr;
     pthread_mutexattr_init(&m_attr);
-
     pthread_mutex_init(&m.read_mutex, &m_attr);
     pthread_mutex_init(&m.sum_mutex, &m_attr);
     pthread_mutex_init(&m.odd_mutex, &m_attr);
     pthread_mutex_init(&m.min_mutex, &m_attr);
     pthread_mutex_init(&m.max_mutex, &m_attr);
 
-    m.sum = m.min = m.n_odd = m.max = m.is_end = 0;
+    m.sum = m.n_odd = m.is_end = 0;
+    m.min = INT_MAX;
+    m.max = INT_MIN;
 
-    m.fp = fopen(FILENAME, "r");
+    m.fp = fopen(filename, "r");
 
     if (!m.fp)
     {
-      printf("ERROR: could not open %s\n", FILENAME);
-      exit(EXIT_FAILURE);
+        printf("ERROR: could not open %s\n", filename);
+        exit(EXIT_FAILURE);
     }
 }
 \end{verbatim}
@@ -333,7 +333,7 @@ int read_char(int arr[])
 
 
 \subsubsection{Thread lavoratore}
-Il thread invoca la funzione \texttt{read\_char}, che con un puntatore passato come parametro e riempie quell'array con i due carateri letti dal file (tipologia e valore).
+Il thread invoca la funzione \texttt{read\_char}, che con un puntatore passato come parametro e riempie quell'array con i due carateri letti dal file (codice e valore).
 Dopodichè il thread esamina la tipologia del lavoro ed esegue le quattro funzioni di aggregazione oppure "dorme", senza aprire nessuna sezione critica, perchè ogni funzione ha la propria.
 
 \hfill
@@ -368,49 +368,33 @@ void *thread(void *arg)
 \end{coloredquotation}
 \subsubsection{Thread principale}
 Il compito del thread Main è dare luce agli altri thread, inizializzando un array con il numero di thread da creare \texttt{N\_THREAD}, crearli e aspettare che ognuno di essi finisca il proprio lavoro. Dopodichè stampare a video il tempo di esecuzione calcolato e i diversi risultati ottenuti.
+Il thread Main, è il thread master, che una volta creati i thread lavoratori, eseguirà anch'esso lo stesso codice dei lavoratori.
 \begin{coloredquotation}
 \begin{verbatim}
-
-int main()
+int main(int argc, char *argv[])
 {
-    printf("Run app with %d Threads\n\n", N_THREAD);
+    ...
 
-    struct timeval t0;
-    struct timeval t1;
-    float elapsed;
-    pthread_t p[N_THREAD];
-
-    time_t start = time(0);
-
-    gettimeofday(&t0, 0);
-
-    __init__();
-
-    pthread_attr_t a;
-    pthread_attr_init(&a);
-
+    // Create workers
     for (int i = 0; i < N_THREAD; i++)
         pthread_create(&p[i], &a, thread, NULL);
 
+    // Execute master thread
+    thread(NULL);
+
+    // Wait for all
     for (int i = 0; i < N_THREAD; i++)
         pthread_join(p[i], NULL);
 
-    gettimeofday(&t1, 0);
-    elapsed = time_difference_msec(t0, t1);
-
-    printf("TIME: %fms\nSUM: %d\n#ODD: %d\nMIN:
-        %d\nMAX: %d\n", elapsed, m.sum, m.n_odd,
-        m.min, m.max);
-
-    return 0;
+    ...
 }
 \end{verbatim}
 \end{coloredquotation}
 
 \clearpage
 \subsection{Esercizio B}
-A differenza dell'esercizio A che si doveva solo lavorare su diverse variabili condivise, in questo esercizio è anche importante sincronizzare tra di loro i vari thread. Per fare ciò ci si avvale dell'utilizzo dei semafori condizionali privati.
-Risultano molto effcienti e comodi per risolvere questo tipo di problemi dato che un'azione di un thread permette ad un altro thread di continuare la sua esecuzione.
+A differenza dell'esercizio A che si doveva solo lavorare su diverse variabili condivise, in questo esercizio è anche importante sincronizzare tra di loro i vari thread. Per fare ciò ci si avvale dell'utilizzo dei semafori privati.
+Risultano molto effcienti per risolvere questo tipo di problemi dato che un'azione di un thread permette ad un altro thread di continuare la sua esecuzione.
 
 Si comincia con l'inizializzazione delle variabili condivise e dei semafori.
 
@@ -491,7 +475,7 @@ void enter_immigrant(int ID)
 % check-in
 \subsubsubsection{Check-in}
 La normativa recita: \textit{'Una volta che tutti gli immigrati hanno effettuato il check-in, il/la giudice può confermare la richiesta di cittadinanza per naturalizzazione'};
-il/la giudice deve quindi aspettare che tutti gli immigrati entrati nell'edificio prima di lui effettuino il tampone, prima che possa cominciare il suo lavoro di conferma della cittadinanza.
+il/la giudice deve quindi aspettare che tutti gli immigrati entrati nell'edificio prima di lui effettuino il check-in, prima che possa cominciare il suo lavoro di conferma della cittadinanza.
 
 Quando gli immigrati effettuano il check-in viene incrementata la variabile \texttt{immigrants\_checked\_in}. Quando questa variabile raggiunge lo stesso valore di \texttt{immigrants\_in} vuol dire che tutti gli immigrati hanno effettuato il check-in e il/la giudice può quindi cominicare a lavorare.
 
@@ -868,9 +852,40 @@ void *spectator(void *arg)
 \end{verbatim}
 \end{coloredquotation}
 \clearpage
+\section{Test}
+Per testare il funzionamento dei programmi è necessario posizionarsi nella cartella del relativo esercizio ed eseguire il comando make.
+
+\subsection{Esercizio A}
+L'esercizio A richiede 2 parametri di input:
+\begin{itemize}
+    \item numero di thread
+    \item file dei task
+\end{itemize}
+
+\begin{coloredquotation}
+\begin{verbatim}
+./es 20 file.txt
+\end{verbatim}
+\end{coloredquotation}
+
+\subsection{Esercizio B}
+L'esercizio B richiede anch'esso 2 parametri di input:
+\begin{itemize}
+    \item numero di thread immigrati
+    \item numero di thread spettatori
+\end{itemize}
+
+\begin{coloredquotation}
+\begin{verbatim}
+./es 40 30
+\end{verbatim}
+\end{coloredquotation}
+
+\clearpage
 \section{Conclusioni}
 Nel codice, in punti precisi sono stati aggiunti degli \texttt{msleep} che rappresentatno delle pause (casuali e non) per rendere l'esecuzione leggibile e più reale.
 I due esercizi sono stati testati diverse volte su un Macbook Pro M1 pro con architettura arm64, e hanno sempre prodotto i risulati voluti.
+
 
 \clearpage
 
@@ -885,6 +900,5 @@ I due esercizi sono stati testati diverse volte su un Macbook Pro M1 pro con arc
     \end{thebibliography}
 
 \end{document}
-
 
 \end{document}

@@ -8,8 +8,6 @@
 
 #include "../utils/utils.h"
 
-#define N_THREAD 100
-#define N_IMMIGRANTS 50
 #define DELAY_OPERATIONS_MSEC 500
 
 typedef struct
@@ -106,6 +104,8 @@ void enter_spectator()
         pthread_cond_wait(&m.priv_spectator, &m.mutex);
     }
 
+    printf("Enter spectator...\n");
+
     m.spectators_in++;
 
     pthread_mutex_unlock(&m.mutex);
@@ -115,6 +115,8 @@ void enter_spectator()
 void leave_spectator()
 {
     pthread_mutex_lock(&m.mutex);
+
+    printf("Leave spectator...\n");
 
     m.spectators_in--;
 
@@ -161,11 +163,11 @@ void leave_judge()
 void check_in(int ID)
 {
     pthread_mutex_lock(&m.mutex);
-    printf("%d) Init check in...\n", ID);
+    printf("%d) Begin check in...\n", ID);
 
     msleep(NULL);
 
-    printf("%d) Finit check in...\n", ID);
+    printf("%d) End check in...\n", ID);
 
     m.immigrants_checked_in++;
 
@@ -182,11 +184,11 @@ void check_in(int ID)
 // Immigrant sit down
 void sit_down(int ID)
 {
-    printf("%d) Init sit down...\n", ID);
+    printf("%d) Begin sit down...\n", ID);
 
     msleep(NULL);
 
-    printf("%d) Finit sit down...\n", ID);
+    printf("%d) End sit down...\n", ID);
 }
 
 // Immigrant swear
@@ -196,13 +198,13 @@ void swear(int ID)
 
     while (!m.is_judge_in)
     {
-        printf("waiting for judge enter...\n");
+        printf("%d) Waiting for the judge...\n", ID);
         pthread_cond_wait(&m.priv_swear_immigrant, &m.mutex);
     }
 
-    printf("%d) Init swear...\n", ID);
+    printf("%d) Begin swear...\n", ID);
     msleep(NULL);
-    printf("%d) Finit swear...\n", ID);
+    printf("%d) End swear...\n", ID);
 
     pthread_mutex_unlock(&m.mutex);
 }
@@ -210,12 +212,13 @@ void swear(int ID)
 void confirm()
 {
     pthread_mutex_lock(&m.mutex);
-    printf("Confirm...\n");
 
     while (m.immigrants_in != m.immigrants_checked_in)
     {
         pthread_cond_wait(&m.priv_judge_check, &m.mutex);
     }
+
+    printf("Confirm...\n");
 
     pthread_cond_signal(&m.priv_get_certificate_immigrant);
 
@@ -268,8 +271,10 @@ void *immigrant(void *arg)
     pthread_exit(NULL);
 }
 
-void *judge()
+void *judge(void *arg)
 {
+
+    const int N_IMMIGRANTS = (int *)arg;
 
     int i;
 
@@ -303,7 +308,7 @@ void *spectator(void *arg)
     pthread_exit(NULL);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 
     struct timeval t0;
@@ -311,15 +316,32 @@ int main()
     float elapsed;
     int i;
 
-    time_t start = time(0);
+    if (argc != 3)
+    {
+        printf("2 parameters reqired!\n");
+        printf("`./a N_IMMIGRANTS N_SPECTATORS`\n");
+        printf("ex: `./a 30 20`\n");
+        exit(NULL);
+    }
+
+    const int N_IMMIGRANTS = atoi(argv[1]);
+    const int N_SPECTATORS = atoi(argv[2]);
+
+    if (N_IMMIGRANTS < 1 || N_SPECTATORS < 1)
+    {
+        printf("Values must be integer and at least 1.\n");
+        exit(NULL);
+    }
+
+    const int TOTAL_THREADS = N_IMMIGRANTS + N_SPECTATORS + 1;
 
     gettimeofday(&t0, 0);
 
-    printf("Run app with %d Threads\n\n", N_THREAD);
+    printf("Run app with %d Threads\n\n", TOTAL_THREADS);
 
     srand(time(NULL));
 
-    pthread_t p[N_THREAD];
+    pthread_t p[TOTAL_THREADS];
 
     char c;
 
@@ -328,15 +350,15 @@ int main()
     pthread_attr_t a;
     pthread_attr_init(&a);
 
-    pthread_create(&p[0], &a, judge, NULL);
+    pthread_create(&p[0], &a, judge, (void *)N_IMMIGRANTS);
 
     for (i = 1; i < N_IMMIGRANTS + 1; i++)
         pthread_create(&p[i], &a, immigrant, (void *)i);
 
-    for (i = N_IMMIGRANTS + 1; i < N_THREAD + 1; i++)
+    for (i = N_IMMIGRANTS + 1; i < TOTAL_THREADS + 1; i++)
         pthread_create(&p[i], &a, spectator, (void *)i);
 
-    for (i = 0; i < N_THREAD; i++)
+    for (i = 0; i < TOTAL_THREADS; i++)
         pthread_join(p[i], NULL);
 
     gettimeofday(&t1, 0);

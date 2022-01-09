@@ -139,8 +139,6 @@ void *thread(void *arg)
             msleep(n * 100);
         }
     }
-
-    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[])
@@ -157,16 +155,13 @@ int main(int argc, char *argv[])
         exit(NULL);
     }
 
-    char *filename;
-
     const int N_THREAD = atoi(argv[1]) - 1;
+
     if (N_THREAD < 0)
     {
         printf("N_THREAD must be at least 1.\n");
         exit(NULL);
     }
-    filename = malloc(sizeof(char) * strlen(argv[2]));
-    strcpy(filename, argv[2]);
 
     if (!file_exists(argv[2]))
         exit(NULL);
@@ -180,7 +175,7 @@ int main(int argc, char *argv[])
     pthread_attr_t a;
     pthread_attr_init(&a);
 
-    __init__(filename);
+    __init__(argv[2]);
 
     for (int i = 0; i < N_THREAD; i++)
         pthread_create(&p[i], &a, thread, NULL);

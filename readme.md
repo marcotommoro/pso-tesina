@@ -11,24 +11,33 @@ Nella cartella _utils_ ho inserito due funzioni che ho utilizzato in entrambe le
 
 ---
 
-Per testare il funzionamento dei programmi basta semplicemente posizionarsi nella cartella dell'esercizio ed eseguire il comando **make**.
+Per testare il funzionamento dei programmi è necessario posizionarsi nella cartella del relativo esercizio ed eseguire il comando **make**.
 
 ```
 cd A/
 make
 ```
 
-É anche possibile fare il build del programma ed eseguirlo poi successivamente:
+## Esercizio A
+
+L'esercizio A richiede **2 parametri** di input:
+
+1. numero di thread
+2. file dei task
 
 ```
-cd A/
-make build
-make run
+./es 20 file.txt
 ```
 
-Si puo lanciare il programma dopo averlo compilato con:
+---
+
+## Esercizio B
+
+L'esercizio B richiede anch'esso **2 parametri** di input:
+
+1. numero di thread immigrati
+2. numero di thread spettatori
 
 ```
-cd A/
-./es
+./es 40 30
 ```
